@@ -2592,6 +2592,9 @@ async def bulk_update_team_keys(
         )
 
     # Resolve which keys to update (single batched query, scoped to team).
+    # Tokens may arrive as raw `sk-...` API keys or as already-hashed token IDs;
+    # the DB stores hashes, so always look up via _hash_token_if_needed (idempotent
+    # for already-hashed values).
     if data.all_keys_in_team:
         existing_keys = await prisma_client.db.litellm_verificationtoken.find_many(
             where={"team_id": data.team_id},
@@ -2607,33 +2610,48 @@ async def bulk_update_team_keys(
             )
         requested_tokens = [row.token for row in existing_keys]
     else:
-        # validator guarantees key_ids is set and non-empty when all_keys_in_team=False
-        assert data.key_ids is not None
-        existing_keys = await prisma_client.db.litellm_verificationtoken.find_many(
-            where={"team_id": data.team_id, "token": {"in": data.key_ids}}
-        )
+        if data.key_ids is None or len(data.key_ids) == 0:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "key_ids must be provided when all_keys_in_team is False"
+                },
+            )
         requested_tokens = list(data.key_ids)
+        hashed_key_ids = [_hash_token_if_needed(k) for k in requested_tokens]
+        existing_keys = await prisma_client.db.litellm_verificationtoken.find_many(
+            where={"team_id": data.team_id, "token": {"in": hashed_key_ids}}
+        )
+
+    # Fail-fast auth: non-proxy-admin callers must be a member of `data.team_id`
+    # with KEY_UPDATE permission. Anchor the check on the request's team_id
+    # (not on existing_keys) so callers who pass key_ids that don't belong to
+    # the team — or query an empty team — still hit the membership gate
+    # instead of silently bypassing it. Per-key checks inside
+    # _process_single_key_update will short-circuit on the cached team object
+    # after this.
+    if user_api_key_dict.user_role != LitellmUserRoles.PROXY_ADMIN.value:
+        auth_anchor = (
+            existing_keys[0]
+            if existing_keys
+            else LiteLLM_VerificationToken(
+                token="__team_scope_auth_check__",
+                team_id=data.team_id,
+                models=[],
+            )
+        )
+        await TeamMemberPermissionChecks.can_team_member_execute_key_management_endpoint(
+            user_api_key_dict=user_api_key_dict,
+            route=KeyManagementRoutes.KEY_UPDATE,
+            prisma_client=prisma_client,
+            existing_key_row=auth_anchor,
+            user_api_key_cache=user_api_key_cache,
+        )
 
     if not requested_tokens:
         raise HTTPException(
             status_code=404,
             detail={"error": f"No keys found for team {data.team_id}"},
-        )
-
-    # Fail-fast auth: if caller is not proxy admin, verify they have KEY_UPDATE
-    # permission for this team once (using any in-team key as the auth subject).
-    # Per-key checks inside _process_single_key_update will short-circuit on the
-    # cached team object after this.
-    if (
-        user_api_key_dict.user_role != LitellmUserRoles.PROXY_ADMIN.value
-        and existing_keys
-    ):
-        await TeamMemberPermissionChecks.can_team_member_execute_key_management_endpoint(
-            user_api_key_dict=user_api_key_dict,
-            route=KeyManagementRoutes.KEY_UPDATE,
-            prisma_client=prisma_client,
-            existing_key_row=existing_keys[0],
-            user_api_key_cache=user_api_key_cache,
         )
 
     existing_by_token = {row.token: row for row in existing_keys}
@@ -2643,8 +2661,12 @@ async def bulk_update_team_keys(
     failed_updates: List[FailedKeyUpdate] = []
 
     for token in requested_tokens:
+        # `token` may be a raw `sk-...` (key_ids path) or an already-hashed
+        # token id (all_keys_in_team path). existing_by_token is keyed by the
+        # DB-stored hash; hash the user-supplied form to look it up.
+        db_token = _hash_token_if_needed(token)
         try:
-            if token not in existing_by_token:
+            if db_token not in existing_by_token:
                 raise HTTPException(
                     status_code=404,
                     detail={"error": f"Key not found in team {data.team_id}"},
@@ -2677,7 +2699,7 @@ async def bulk_update_team_keys(
                 _build_failed_team_key_update(
                     token=token,
                     exception=e,
-                    existing_key_row=existing_by_token.get(token),
+                    existing_key_row=existing_by_token.get(db_token),
                 )
             )
 
