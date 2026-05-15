@@ -1,0 +1,25 @@
+litellm/integrations/opentelemetry.py
+  s_d4b534f8957554::t_6c5b7336e47412 2422-2428
+  s_d4b534f8957554::t_096ddd43b202ab 660-661,665,675-686
+  s_d4b534f8957554::t_a4073458bbf45a 883-889
+  s_d4b534f8957554::t_d22b3ca3ee2fbe 1479-1564
+tests/test_litellm/integrations/test_opentelemetry.py
+  s_d4b534f8957554::t_8b9c33a782cf0d 2095,4281-4349,4356-4533
+  s_d4b534f8957554::t_ff0577f7fa0e27 4350-4355
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "df43976b21e469c5a920e7873fc431cdd6de7fdb",
+  "prompts": {},
+  "sessions": {
+    "s_d4b534f8957554": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1e05dac7affeOLOSAWHtdrVVbB",
+        "model": "claude-opus-4-6@default"
+      },
+      "human_author": "Aneesh-Fiddler <aneeshfiddler@gmail.com>"
+    }
+  }
+}
