@@ -1,0 +1,25 @@
+litellm/integrations/opentelemetry.py
+  a14fbc37e5dba3f1 1686-1687,1690-1695,1779,1781,1790-1826,1931,1940-1945,1951,1957
+tests/test_litellm/integrations/test_opentelemetry.py
+  a14fbc37e5dba3f1 3318-3488
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "466b4ddae31beb94635f72adc796d731b485930f",
+  "prompts": {
+    "a14fbc37e5dba3f1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_24567a78bffePgA91SFyv8TN93",
+        "model": "google-vertex-anthropic/claude-opus-4-6@default"
+      },
+      "human_author": "Aneesh-Fiddler",
+      "messages": [],
+      "total_additions": 562,
+      "total_deletions": 341,
+      "accepted_lines": 473,
+      "overriden_lines": 0
+    }
+  }
+}
