@@ -1,0 +1,13 @@
+litellm/integrations/opentelemetry.py
+  s_eda049e913eac6::t_3ff17241b8f932 982-988
+  s_eda049e913eac6::t_8813ad484e19ac 801-805,2607-2613
+tests/test_litellm/integrations/test_opentelemetry.py
+  s_eda049e913eac6::t_35c935a4e43acc 5230-5232
+  s_eda049e913eac6::t_4b88772e5484fa 111-113,137-139,2644,5146-5182,5186-5199,5203-5206,5210-5214,5216-5229,5233-5273
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "e63dbf0d0806f5445c673999d983e4a5e54187c8",
+  "prompts": {}
+}
